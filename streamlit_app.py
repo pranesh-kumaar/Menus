@@ -207,13 +207,12 @@ def main():
         # Load and sort the recipes
         df_sorted = st.session_state.data.sort_values(by="Recipe Name")
 
-        # Apply masked text for recipe link
         df_sorted["Recipe Link"] = df_sorted["Recipe Link"].apply(
-                    lambda x: f"[View Recipe]({x})" if pd.notna(x) and x != "N/A" else "N/A"
-                )
+            lambda x: f'<a href="{x}" target="_blank">View Recipe</a>' if pd.notna(x) and x != "N/A" else "N/A"
+        )
 
-        # Display DataFrame with the masked link column
-        st.table(df_sorted.set_index("Recipe Name"))
+        # Display DataFrame using st.write() with HTML rendering
+        st.write(df_sorted.to_html(escape=False, index=False), unsafe_allow_html=True)
         
         # Add a Recipe Button
         with st.expander("Add a New Recipe"):
