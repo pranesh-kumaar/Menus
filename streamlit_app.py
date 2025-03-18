@@ -5,6 +5,7 @@ from datetime import datetime
 
 # Predefined Excel file path
 EXCEL_FILE_PATH = r"Meals.xlsx"
+st.set_page_config(page_title="Meal Planner", layout="wide")
 
 # Function to load data from Excel
 def load_data(file_path, sheet_name=0):
