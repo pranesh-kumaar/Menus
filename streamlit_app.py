@@ -212,7 +212,7 @@ def main():
         )
 
         # Display DataFrame using st.write() with HTML rendering
-        st.write(df_sorted.to_html(escape=False, index=False), unsafe_allow_html=True)
+        st.dataframe(df_sorted)
         
         # Add a Recipe Button
         with st.expander("Add a New Recipe"):
