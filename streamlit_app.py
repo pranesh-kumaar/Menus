@@ -2,9 +2,7 @@ import streamlit as st
 import pandas as pd
 import random
 from datetime import datetime
-
-# Inject custom CSS for increasing font size inside st.expander
-
+from streamlit_option_menu import option_menu
 
 # Predefined Excel file path
 EXCEL_FILE_PATH = r"Meals.xlsx"
@@ -32,6 +30,27 @@ def save_data(data, file_path, sheet_name):
     with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
         for sheet, df in existing_sheets.items():
             df.to_excel(writer, index=False, sheet_name=sheet)
+
+# Convert weekly menu into a calendar-style DataFrame
+def create_calendar_view(meal_data, available_recipes):
+    # Create a dictionary to hold meal details for each day
+    calendar_dict = {day: {"Breakfast": "", "Lunch": "", "Dinner": ""} for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']}
+
+    for meal in meal_data:
+        calendar_dict[meal["Day"]][meal["Meal Type"]] = meal["Recipe Name"]
+
+    # Convert to DataFrame
+    calendar_df = pd.DataFrame.from_dict(calendar_dict, orient='index')
+
+    # Convert meal columns to dropdowns with only available recipes
+    column_config = {
+        meal_type: st.column_config.SelectboxColumn(
+            label=meal_type,
+            options=available_recipes,  # Restrict selection to available recipes
+        ) for meal_type in ["Breakfast", "Lunch", "Dinner"]
+    }
+
+    return calendar_df, column_config
 
 # Function to select random recipes for a specific day
 def select_random_recipes_for_day(df, day, previous_meals):
@@ -63,7 +82,7 @@ def select_random_recipes_for_day(df, day, previous_meals):
 # Main function to run the Streamlit app
 def main():
     
-    st.title("Weekly Meal Planner 🍽️")
+    st.title("Meal Planner 🍽️")
     
     # Initialize session state for data
     if 'data' not in st.session_state:
@@ -85,12 +104,23 @@ def main():
                 if len(previous_meals) > 6:
                     previous_meals = previous_meals[-6:]
 
-    # Sidebar for navigation
-    sidebar_option = st.sidebar.selectbox("Select a section", ["Menus", "Recipes"])
-    
-    if sidebar_option == "Menus":
-        # Generate Menu Button
-        if st.button("Generate Menu"):
+    # Styled navigation bar
+    nav_option = option_menu(
+        menu_title="",  # Hide the default menu title
+        options=["Generate Menu", "Menus", "Recipes", "Ingredients"],
+        icons=["play-circle-fill", "map-fill", "table", "tablet-fill"],  # Empty icons for all options
+        menu_icon="menu-button-wide",  # Icon for menu
+        default_index=1,  # Default to "Menus"
+        orientation="horizontal",
+        styles={
+            "nav-link": {"font-size": "16px", "text-align": "center", "margin": "5px"},
+            "nav-link-selected": {"color": "white", "font-weight": "normal",},  # Highlight selected tab
+        }
+        
+    )
+
+    if nav_option == "Generate Menu":
+        if st.button("Re-Generate Menu"):
             
             # Initialize a list to keep track of previous meals
             previous_meals = []
@@ -112,9 +142,103 @@ def main():
             weekly_menu_df = pd.DataFrame(st.session_state.all_meals_for_week)
             save_data(weekly_menu_df, EXCEL_FILE_PATH, sheet_name='Weekly Menu')
             st.session_state.all_meals_for_week = load_data(EXCEL_FILE_PATH, sheet_name='Weekly Menu').to_dict('records')
-            st.success("Menu generated and saved successfully!")
+
+                # Display the weekly menu
+        days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        st.session_state.all_meals_for_week = load_data(EXCEL_FILE_PATH, sheet_name='Weekly Menu').to_dict('records')
+        # for day in days_of_week:
+        #     st.subheader(f"Recipes for {day}")
+        #     day_meals = [meal for meal in st.session_state.all_meals_for_week if meal['Day'] == day]
+        #     day_df = pd.DataFrame(day_meals).drop(columns=['Day'])
+        #     day_df = day_df[['Meal Type', 'Recipe Name', 'Ingredients', 'Recipe Link', 'Notes']]
+        #     day_df["Recipe Link"] = day_df["Recipe Link"].apply(
+        #         lambda x: f"[View Recipe]({x})" if pd.notna(x) and x != "N/A" else "N/A"
+        #     )
+            #st.table(day_df[['Meal Type', 'Recipe Name', 'Recipe Link']].set_index("Meal Type"))
+
+        # Load all available recipe names
+        all_recipes_list = st.session_state.data["Recipe Name"].tolist()
+
+        # Display the editable calendar view
+        # st.subheader("📅 Editable Weekly Meal Calendar")
+        calendar_df, column_config = create_calendar_view(st.session_state.all_meals_for_week, all_recipes_list)
+
+        # Enable in-line editing
+        edited_calendar_df = st.data_editor(calendar_df, column_config=column_config, num_rows="fixed", use_container_width=True)
+
+        # Detect changes and update the session state
+        if edited_calendar_df is not None and not edited_calendar_df.equals(calendar_df):
+            # Update session state with new meal selections
+            for day in edited_calendar_df.index:
+                for meal_type in ["Breakfast", "Lunch", "Dinner"]:
+                    new_recipe_name = edited_calendar_df.at[day, meal_type]
+                    
+                    # Find the meal entry in session state and update it
+                    for meal in st.session_state.all_meals_for_week:
+                        if meal["Day"] == day and meal["Meal Type"] == meal_type:
+                            meal["Recipe Name"] = new_recipe_name
+                            # Update ingredients, link, and notes based on selected recipe
+                            selected_recipe = st.session_state.data[st.session_state.data["Recipe Name"] == new_recipe_name].iloc[0]
+                            meal["Ingredients"] = selected_recipe["Ingredients"]
+                            meal["Recipe Link"] = selected_recipe["Recipe Link"] if pd.notna(selected_recipe["Recipe Link"]) else "N/A"
+                            meal["Notes"] = selected_recipe["Notes"] if pd.notna(selected_recipe["Notes"]) else "N/A"
+
+            # Save updated meals to Excel
+            updated_menu_df = pd.DataFrame(st.session_state.all_meals_for_week)
+            save_data(updated_menu_df, EXCEL_FILE_PATH, sheet_name="Weekly Menu")
+
+            # Refresh session state
+            st.session_state.all_meals_for_week = load_data(EXCEL_FILE_PATH, sheet_name="Weekly Menu").to_dict("records")
+            st.rerun()
+
+        # Edit Meal Expander
+        with st.expander("Edit Meal"):
+            # Select a day to edit
+            day_to_edit = st.selectbox("Select a Day to Edit", days_of_week, key="edit_day_select")
+
+            # Select a meal type to edit
+            meal_type_to_edit = st.selectbox("Select a Meal Type", ['Breakfast', 'Lunch', 'Dinner'], key="edit_meal_type_select")
+
+            # Find the current meal for the selected day and meal type
+            current_meal = next((meal for meal in st.session_state.all_meals_for_week if meal['Day'] == day_to_edit and meal['Meal Type'] == meal_type_to_edit), None)
+
+            # Get all recipe names from the first sheet
+            all_recipes = st.session_state.data['Recipe Name'].tolist()
+
+            # Pre-select the current recipe if it exists
+            selected_recipe_name = current_meal['Recipe Name'] if current_meal else all_recipes[0]
+
+            # Select a recipe from the first sheet
+            selected_recipe_name = st.selectbox("Select a Recipe", all_recipes, index=all_recipes.index(selected_recipe_name), key="select_recipe_name")
+
+            # Find the selected recipe details
+            selected_recipe = st.session_state.data[st.session_state.data['Recipe Name'] == selected_recipe_name].iloc[0]
+
+            # Display selected recipe details
+            st.write("**Selected Recipe Details:**")
+            st.write(f"**Ingredients:** {selected_recipe['Ingredients']}")
+            st.write(f"**Recipe Link:** {selected_recipe['Recipe Link']}")
+            st.write(f"**Notes:** {selected_recipe['Notes']}")
+
+            # Save changes button
+            if st.button("Update Menu", key="update_menu_button"):
+                # Update the meal in the session state
+                for meal in st.session_state.all_meals_for_week:
+                    if meal['Day'] == day_to_edit and meal['Meal Type'] == meal_type_to_edit:
+                        meal['Recipe Name'] = selected_recipe_name
+                        meal['Ingredients'] = selected_recipe['Ingredients']
+                        meal['Recipe Link'] = selected_recipe['Recipe Link']
+                        meal['Notes'] = selected_recipe['Notes']
+                        break
+
+                # Save the updated weekly menu to the Excel file
+                weekly_menu_df = pd.DataFrame(st.session_state.all_meals_for_week)
+                save_data(weekly_menu_df, EXCEL_FILE_PATH, sheet_name='Weekly Menu')
+                st.session_state.all_meals_for_week = load_data(EXCEL_FILE_PATH, sheet_name='Weekly Menu').to_dict('records')
+                st.rerun()
+    
+    elif nav_option == "Menus":
                 
-        
         # Display the weekly menu
         days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
         today_index = datetime.now().weekday()
@@ -172,54 +296,8 @@ def main():
                         st.write(f"**Notes:** {row['Notes']}")
                         st.markdown("_")
 
-
-        # Edit Meal Expander
-        with st.expander("Edit Meal"):
-            # Select a day to edit
-            day_to_edit = st.selectbox("Select a Day to Edit", days_of_week, key="edit_day_select")
-
-            # Select a meal type to edit
-            meal_type_to_edit = st.selectbox("Select a Meal Type", ['Breakfast', 'Lunch', 'Dinner'], key="edit_meal_type_select")
-
-            # Find the current meal for the selected day and meal type
-            current_meal = next((meal for meal in st.session_state.all_meals_for_week if meal['Day'] == day_to_edit and meal['Meal Type'] == meal_type_to_edit), None)
-
-            # Get all recipe names from the first sheet
-            all_recipes = st.session_state.data['Recipe Name'].tolist()
-
-            # Pre-select the current recipe if it exists
-            selected_recipe_name = current_meal['Recipe Name'] if current_meal else all_recipes[0]
-
-            # Select a recipe from the first sheet
-            selected_recipe_name = st.selectbox("Select a Recipe", all_recipes, index=all_recipes.index(selected_recipe_name), key="select_recipe_name")
-
-            # Find the selected recipe details
-            selected_recipe = st.session_state.data[st.session_state.data['Recipe Name'] == selected_recipe_name].iloc[0]
-
-            # Display selected recipe details
-            st.write("**Selected Recipe Details:**")
-            st.write(f"**Ingredients:** {selected_recipe['Ingredients']}")
-            st.write(f"**Recipe Link:** {selected_recipe['Recipe Link']}")
-            st.write(f"**Notes:** {selected_recipe['Notes']}")
-
-            # Save changes button
-            if st.button("Update Menu", key="update_menu_button"):
-                # Update the meal in the session state
-                for meal in st.session_state.all_meals_for_week:
-                    if meal['Day'] == day_to_edit and meal['Meal Type'] == meal_type_to_edit:
-                        meal['Recipe Name'] = selected_recipe_name
-                        meal['Ingredients'] = selected_recipe['Ingredients']
-                        meal['Recipe Link'] = selected_recipe['Recipe Link']
-                        meal['Notes'] = selected_recipe['Notes']
-                        break
-
-                # Save the updated weekly menu to the Excel file
-                weekly_menu_df = pd.DataFrame(st.session_state.all_meals_for_week)
-                save_data(weekly_menu_df, EXCEL_FILE_PATH, sheet_name='Weekly Menu')
-                st.session_state.all_meals_for_week = load_data(EXCEL_FILE_PATH, sheet_name='Weekly Menu').to_dict('records')
-                st.success(f"{meal_type_to_edit} updated successfully for {day_to_edit}!")
     
-    elif sidebar_option == "Recipes":
+    elif nav_option == "Recipes":
         st.subheader("All Recipes")
         # Reset index to bring "Recipe Name" back as a column
         st.session_state.data = load_data(EXCEL_FILE_PATH, sheet_name='Recipes')
@@ -263,9 +341,9 @@ def main():
                     new_recipe_df = pd.DataFrame([new_recipe])
                     st.session_state.data = pd.concat([st.session_state.data, new_recipe_df], ignore_index=True)
                     save_data(st.session_state.data, EXCEL_FILE_PATH, sheet_name='Recipes')
-                    st.success("Recipe added successfully!")
                     # Refresh data
                     st.session_state.data = load_data(EXCEL_FILE_PATH, sheet_name='Recipes')
+                    st.rerun()
 
         # Edit a Recipe Button
         with st.expander("Edit a Recipe"):
@@ -288,9 +366,9 @@ def main():
                     st.session_state.data.loc[st.session_state.data['Recipe Name'] == selected_recipe_name, 'Ingredients'] = edit_ingredients
                     st.session_state.data.loc[st.session_state.data['Recipe Name'] == selected_recipe_name, 'Notes'] = edit_notes
                     save_data(st.session_state.data, EXCEL_FILE_PATH, sheet_name='Recipes')
-                    st.success("Recipe updated successfully!")
                     # Refresh data
                     st.session_state.data = load_data(EXCEL_FILE_PATH, sheet_name='Recipes')
+                    st.rerun()
 
         # Delete a Recipe Button
         with st.expander("Delete a Recipe"):
@@ -299,9 +377,9 @@ def main():
             if st.button("Delete Recipe", key="delete_recipe_button"):
                 st.session_state.data = st.session_state.data[st.session_state.data['Recipe Name'] != selected_recipe_name_to_delete]
                 save_data(st.session_state.data, EXCEL_FILE_PATH, sheet_name='Recipes')
-                st.success("Recipe deleted successfully!")
                 # Refresh data
                 st.session_state.data = load_data(EXCEL_FILE_PATH, sheet_name='Recipes')
+                st.rerun()
 
 if __name__ == "__main__":
     main()
