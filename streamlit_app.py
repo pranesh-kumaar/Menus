@@ -208,19 +208,12 @@ def main():
         df_sorted = st.session_state.data.sort_values(by="Recipe Name")
 
         # Apply masked text for recipe link
-        def mask_links(val):
-            if pd.notna(val) and val != "N/A":
-                return f'🔗 View Recipe'  # Mask the link
-            return "N/A"
-
-        # Store original links separately for reference
-        df_sorted["Masked Recipe Link"] = df_sorted["Recipe Link"].apply(mask_links)
-
-        # Drop original link column and rename the masked column
-        df_display = df_sorted.drop(columns=["Recipe Link"]).rename(columns={"Masked Recipe Link": "Recipe Link"})
+        df_sorted["Recipe Link"] = df_sorted["Recipe Link"].apply(
+                    lambda x: f"[View Recipe]({x})" if pd.notna(x) and x != "N/A" else "N/A"
+                )
 
         # Display DataFrame with the masked link column
-        st.dataframe(df_display, use_container_width=True)
+        st.table(df_sorted.set_index("Recipe Name"))
         
         # Add a Recipe Button
         with st.expander("Add a New Recipe"):
