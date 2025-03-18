@@ -204,17 +204,23 @@ def main():
         # Reset index to bring "Recipe Name" back as a column
         st.session_state.data = load_data(EXCEL_FILE_PATH, sheet_name='Recipes')
 
-        # Sort the DataFrame alphabetically by "Recipe Name"
+        # Load and sort the recipes
         df_sorted = st.session_state.data.sort_values(by="Recipe Name")
 
-        # Convert "Recipe Link" to clickable format
-        if "Recipe Link" in df_sorted.columns:
-            df_sorted["Recipe Link"] = df_sorted["Recipe Link"].apply(
-                lambda x: f'<a href="{x}" target="_blank">View Recipe</a>' if pd.notna(x) and x != "N/A" else "N/A"
-            )
+        # Apply masked text for recipe link
+        def mask_links(val):
+            if pd.notna(val) and val != "N/A":
+                return f'🔗 View Recipe'  # Mask the link
+            return "N/A"
 
-        # Drop index and convert DataFrame to HTML
-        st.markdown(df_sorted.to_html(escape=False, index=False), unsafe_allow_html=True)
+        # Store original links separately for reference
+        df_sorted["Masked Recipe Link"] = df_sorted["Recipe Link"].apply(mask_links)
+
+        # Drop original link column and rename the masked column
+        df_display = df_sorted.drop(columns=["Recipe Link"]).rename(columns={"Masked Recipe Link": "Recipe Link"})
+
+        # Display DataFrame with the masked link column
+        st.dataframe(df_display, use_container_width=True)
         
         # Add a Recipe Button
         with st.expander("Add a New Recipe"):
