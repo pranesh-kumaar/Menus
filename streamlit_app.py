@@ -34,7 +34,7 @@ def save_data(data, file_path, sheet_name):
 # Convert weekly menu into a calendar-style DataFrame
 def create_calendar_view(meal_data, available_recipes):
     # Create a dictionary to hold meal details for each day
-    calendar_dict = {day: {"Breakfast": "", "Lunch": "", "Dinner": ""} for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']}
+    calendar_dict = {day: {"Breakfast": "", "Lunch": "", "Dinner": ""} for day in ['M', 'T', 'W', 'T', 'F', 'S', 'S']}
 
     for meal in meal_data:
         calendar_dict[meal["Day"]][meal["Meal Type"]] = meal["Recipe Name"]
