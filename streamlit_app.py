@@ -87,7 +87,7 @@ def select_random_recipes_for_day(df, day, previous_meals):
 # Main function to run the Streamlit app
 def main():
     
-    st.title("Meal Planner 🍽️")
+    st.subheader("Meal Planner 🍽️")
     
     # Initialize session state for data
     if 'data' not in st.session_state:
