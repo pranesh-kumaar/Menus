@@ -137,7 +137,13 @@ def main():
                 day_df["Recipe Link"] = day_df["Recipe Link"].apply(
                     lambda x: f"[View Recipe]({x})" if pd.notna(x) and x != "N/A" else "N/A"
                 )
-                st.table(day_df.set_index("Meal Type"))
+                st.table(day_df[['Meal Type', 'Recipe Name', 'Recipe Link']].set_index("Meal Type"))
+                with st.expander("Show All Details (Ingredients & Notes)"):
+                    for index, row in day_df.iterrows():
+                        st.markdown(f"### {row['Meal Type']}: {row['Recipe Name']}")
+                        st.write(f"**Ingredients:** {row['Ingredients']}")
+                        st.write(f"**Notes:** {row['Notes']}")
+                        st.markdown("---")  # Adds a separator between meals
 
 
         # Edit Meal Expander
