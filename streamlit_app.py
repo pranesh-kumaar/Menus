@@ -173,7 +173,7 @@ def main():
             calendar_df, 
             column_config=column_config, 
             num_rows="fixed",  # Ensures the number of rows doesn't change
-            use_container_width=False
+            use_container_width=True
         )
 
         # Detect changes and update the session state
@@ -346,6 +346,29 @@ def main():
                 # Refresh data
                 st.session_state.data = load_data(EXCEL_FILE_PATH, sheet_name='Recipes')
                 st.rerun()
+
+    elif nav_option == "Ingredients":
+        st.markdown("**🛒 Ingredients List for the Week**")
+
+        # Extract ingredients for each day
+        days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        ingredients_data = []
+
+        for day in days_of_week:
+            # Get all meals for the day
+            meals_for_day = [meal for meal in st.session_state.all_meals_for_week if meal["Day"] == day]
+            
+            # Concatenate all ingredients for the day into one string
+            ingredients_list = "; ".join(meal["Ingredients"] for meal in meals_for_day if pd.notna(meal["Ingredients"]))
+            
+            # Append to list
+            ingredients_data.append({"Day": day[:3], "Ingredients": ingredients_list})  # Shorten days to Mon, Tue, etc.
+
+        # Convert to DataFrame
+        ingredients_df = pd.DataFrame(ingredients_data)
+
+        # Display as a table
+        st.table(ingredients_df)
 
 if __name__ == "__main__":
     main()
