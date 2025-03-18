@@ -134,8 +134,10 @@ def main():
                 day_meals = [meal for meal in st.session_state.all_meals_for_week if meal['Day'] == day]
                 day_df = pd.DataFrame(day_meals).drop(columns=['Day'])
                 day_df = day_df[['Meal Type', 'Recipe Name', 'Ingredients', 'Recipe Link', 'Notes']]
-                day_df['Recipe Link'] = day_df['Recipe Link'].apply(lambda x: f'<a href="{x}" target="_blank">View Recipe</a>' if x != "N/A" else "N/A")
-                st.table(day_df)
+                day_df["Recipe Link"] = day_df["Recipe Link"].apply(
+                    lambda x: f"[View Recipe]({x})" if pd.notna(x) and x != "N/A" else "N/A"
+                )
+                st.table(day_df.set_index("Meal Type"))
 
 
         # Edit Meal Expander
