@@ -368,7 +368,7 @@ def main():
         ingredients_df = pd.DataFrame(ingredients_data)
 
         # Display as a table
-        st.table(ingredients_df.set_index("Ingredients"))
+        st.table(ingredients_df)
 
 if __name__ == "__main__":
     main()
