@@ -362,13 +362,13 @@ def main():
             ingredients_list = "; ".join(meal["Ingredients"] for meal in meals_for_day if pd.notna(meal["Ingredients"]))
             
             # Append to list
-            ingredients_data.append({"Day": day[:3], "Ingredients": ingredients_list})  # Shorten days to Mon, Tue, etc.
+            ingredients_data.append({"Ingredients": ingredients_list})  # Shorten days to Mon, Tue, etc.
 
         # Convert to DataFrame
         ingredients_df = pd.DataFrame(ingredients_data)
 
         # Display as a table
-        st.table(ingredients_df.set_index("Day"))
+        st.table(ingredients_df)
 
 if __name__ == "__main__":
     main()
