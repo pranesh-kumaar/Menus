@@ -162,10 +162,10 @@ def main():
             #st.table(day_df[['Meal Type', 'Recipe Name', 'Recipe Link']].set_index("Meal Type"))
 
         # Load all available recipe names
-        all_recipes_list = st.session_state.data["Recipe Name"].tolist()
+        all_recipes_list = sorted(st.session_state.data["Recipe Name"].tolist())
 
         # Display the editable calendar view
-        st.subheader("📅 Editable Weekly Meal Calendar")
+        st.subheader("📅 Meal Calendar")
         calendar_df, column_config = create_calendar_view(st.session_state.all_meals_for_week, all_recipes_list)
 
         # Enable in-line editing with restricted dropdowns
@@ -173,7 +173,7 @@ def main():
             calendar_df, 
             column_config=column_config, 
             num_rows="fixed",  # Ensures the number of rows doesn't change
-            use_container_width=True
+            use_container_width=False
         )
 
         # Detect changes and update the session state
