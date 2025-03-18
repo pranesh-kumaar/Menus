@@ -3,6 +3,9 @@ import pandas as pd
 import random
 from datetime import datetime
 
+# Inject custom CSS for increasing font size inside st.expander
+
+
 # Predefined Excel file path
 EXCEL_FILE_PATH = r"Meals.xlsx"
 st.set_page_config(page_title="Meal Planner", layout="wide")
@@ -59,6 +62,7 @@ def select_random_recipes_for_day(df, day, previous_meals):
 
 # Main function to run the Streamlit app
 def main():
+    
     st.title("Weekly Meal Planner 🍽️")
     
     # Initialize session state for data
@@ -124,16 +128,32 @@ def main():
             today_meals = [meal for meal in st.session_state.all_meals_for_week if meal['Day'] == days_of_week[today_index]]
             today_df = pd.DataFrame(today_meals).drop(columns=['Day'])
             today_df = today_df[['Meal Type', 'Recipe Name', 'Ingredients', 'Recipe Link', 'Notes']]
-            today_df['Recipe Link'] = today_df['Recipe Link'].apply(lambda x: f'<a href="{x}" target="_blank">View Recipe</a>' if x != "N/A" else "N/A")
-            st.write(today_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+            today_df["Recipe Link"] = today_df["Recipe Link"].apply(
+                    lambda x: f"[View Recipe]({x})" if pd.notna(x) and x != "N/A" else "N/A"
+                )
+            st.table(today_df[['Meal Type', 'Recipe Name', 'Recipe Link']].set_index("Meal Type"))
+            with st.expander("Show All Details (Ingredients & Notes)"):
+                for index, row in today_df.iterrows():
+                    st.markdown(f"**{row['Meal Type']}**: {row['Recipe Name']}")
+                    st.write(f"**Ingredients:** {row['Ingredients']}")
+                    st.write(f"**Notes:** {row['Notes']}")
+                    st.markdown("_")
         
         elif option == "View Tomorrow's Recipe":
             st.subheader(f"Recipes for {days_of_week[tomorrow_index]}")
             tomorrow_meals = [meal for meal in st.session_state.all_meals_for_week if meal['Day'] == days_of_week[tomorrow_index]]
             tomorrow_df = pd.DataFrame(tomorrow_meals).drop(columns=['Day'])
             tomorrow_df = tomorrow_df[['Meal Type', 'Recipe Name', 'Ingredients', 'Recipe Link', 'Notes']]
-            tomorrow_df['Recipe Link'] = tomorrow_df['Recipe Link'].apply(lambda x: f'<a href="{x}" target="_blank">View Recipe</a>' if x != "N/A" else "N/A")
-            st.write(tomorrow_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+            tomorrow_df["Recipe Link"] = tomorrow_df["Recipe Link"].apply(
+                    lambda x: f"[View Recipe]({x})" if pd.notna(x) and x != "N/A" else "N/A"
+                )
+            st.table(tomorrow_df[['Meal Type', 'Recipe Name', 'Recipe Link']].set_index("Meal Type"))
+            with st.expander("Show All Details (Ingredients & Notes)"):
+                for index, row in tomorrow_df.iterrows():
+                    st.markdown(f"**{row['Meal Type']}**: {row['Recipe Name']}")
+                    st.write(f"**Ingredients:** {row['Ingredients']}")
+                    st.write(f"**Notes:** {row['Notes']}")
+                    st.markdown("_")
         
         elif option == "View Week's Recipe":
             for day in days_of_week:
@@ -147,10 +167,10 @@ def main():
                 st.table(day_df[['Meal Type', 'Recipe Name', 'Recipe Link']].set_index("Meal Type"))
                 with st.expander("Show All Details (Ingredients & Notes)"):
                     for index, row in day_df.iterrows():
-                        st.markdown(f"### {row['Meal Type']}: {row['Recipe Name']}")
+                        st.markdown(f"**{row['Meal Type']}**: {row['Recipe Name']}")
                         st.write(f"**Ingredients:** {row['Ingredients']}")
                         st.write(f"**Notes:** {row['Notes']}")
-                        st.markdown("---")  # Adds a separator between meals
+                        st.markdown("_")
 
 
         # Edit Meal Expander
