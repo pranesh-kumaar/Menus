@@ -12,16 +12,23 @@ def load_data(file_path, sheet_name=0):
     df = pd.read_excel(file_path, sheet_name=sheet_name)
     return df
 
-# Function to save data to Excel
-def save_data(data, file_path, sheet_name="Sheet1"):
-    # Ensure sheet_name is valid
-    if not sheet_name or sheet_name.strip() == "":
-        sheet_name = "Sheet1"  # Assign default sheet name
+def save_data(data, file_path, sheet_name):
+    # Try to load existing sheets first
+    try:
+        existing_sheets = pd.read_excel(file_path, sheet_name=None)  # Load all sheets
+    except FileNotFoundError:
+        existing_sheets = {}  # If the file doesn't exist, start fresh
 
+    # Convert new data into a DataFrame
     df = pd.DataFrame(data)
 
+    # Update the existing sheets with the new data
+    existing_sheets[sheet_name] = df  # Replace or add the specific sheet
+
+    # Save all sheets back to the Excel file
     with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name=sheet_name)
+        for sheet, df in existing_sheets.items():
+            df.to_excel(writer, index=False, sheet_name=sheet)
 
 # Function to select random recipes for a specific day
 def select_random_recipes_for_day(df, day, previous_meals):
@@ -52,7 +59,7 @@ def select_random_recipes_for_day(df, day, previous_meals):
 
 # Main function to run the Streamlit app
 def main():
-    st.title("Weekly Meal Planner")
+    st.title("Weekly Meal Planner 🍽️")
     
     # Initialize session state for data
     if 'data' not in st.session_state:
@@ -194,14 +201,20 @@ def main():
     
     elif sidebar_option == "Recipes":
         st.subheader("All Recipes")
+        # Reset index to bring "Recipe Name" back as a column
+        st.session_state.data = load_data(EXCEL_FILE_PATH, sheet_name='Recipes')
+
         # Sort the DataFrame alphabetically by "Recipe Name"
         df_sorted = st.session_state.data.sort_values(by="Recipe Name")
-        
-        # Mask links with "View Recipe"
-        df_sorted['Recipe Link'] = df_sorted['Recipe Link'].apply(lambda x: f'<a href="{x}" target="_blank">View Recipe</a>' if pd.notna(x) else "N/A")
-        
-        # Display the DataFrame without an index
-        st.write(df_sorted.to_html(escape=False, index=False), unsafe_allow_html=True)
+
+        # Convert "Recipe Link" to clickable format
+        if "Recipe Link" in df_sorted.columns:
+            df_sorted["Recipe Link"] = df_sorted["Recipe Link"].apply(
+                lambda x: f'<a href="{x}" target="_blank">View Recipe</a>' if pd.notna(x) and x != "N/A" else "N/A"
+            )
+
+        # Drop index and convert DataFrame to HTML
+        st.markdown(df_sorted.to_html(escape=False, index=False), unsafe_allow_html=True)
         
         # Add a Recipe Button
         with st.expander("Add a New Recipe"):
@@ -229,10 +242,10 @@ def main():
                     }
                     new_recipe_df = pd.DataFrame([new_recipe])
                     st.session_state.data = pd.concat([st.session_state.data, new_recipe_df], ignore_index=True)
-                    save_data(st.session_state.data, EXCEL_FILE_PATH)
+                    save_data(st.session_state.data, EXCEL_FILE_PATH, sheet_name='Recipes')
                     st.success("Recipe added successfully!")
                     # Refresh data
-                    st.session_state.data = load_data(EXCEL_FILE_PATH)
+                    st.session_state.data = load_data(EXCEL_FILE_PATH, sheet_name='Recipes')
 
         # Edit a Recipe Button
         with st.expander("Edit a Recipe"):
@@ -254,10 +267,10 @@ def main():
                     st.session_state.data.loc[st.session_state.data['Recipe Name'] == selected_recipe_name, 'Recipe Link'] = edit_recipe_link
                     st.session_state.data.loc[st.session_state.data['Recipe Name'] == selected_recipe_name, 'Ingredients'] = edit_ingredients
                     st.session_state.data.loc[st.session_state.data['Recipe Name'] == selected_recipe_name, 'Notes'] = edit_notes
-                    save_data(st.session_state.data, EXCEL_FILE_PATH)
+                    save_data(st.session_state.data, EXCEL_FILE_PATH, sheet_name='Recipes')
                     st.success("Recipe updated successfully!")
                     # Refresh data
-                    st.session_state.data = load_data(EXCEL_FILE_PATH)
+                    st.session_state.data = load_data(EXCEL_FILE_PATH, sheet_name='Recipes')
 
         # Delete a Recipe Button
         with st.expander("Delete a Recipe"):
@@ -265,10 +278,10 @@ def main():
             selected_recipe_name_to_delete = st.selectbox("Select a Recipe to Delete", sorted_recipe_names, key="delete_recipe_select")
             if st.button("Delete Recipe", key="delete_recipe_button"):
                 st.session_state.data = st.session_state.data[st.session_state.data['Recipe Name'] != selected_recipe_name_to_delete]
-                save_data(st.session_state.data, EXCEL_FILE_PATH)
+                save_data(st.session_state.data, EXCEL_FILE_PATH, sheet_name='Recipes')
                 st.success("Recipe deleted successfully!")
                 # Refresh data
-                st.session_state.data = load_data(EXCEL_FILE_PATH)
+                st.session_state.data = load_data(EXCEL_FILE_PATH, sheet_name='Recipes')
 
 if __name__ == "__main__":
     main()
