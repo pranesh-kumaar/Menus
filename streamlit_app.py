@@ -113,15 +113,36 @@ def main():
     nav_option = option_menu(
         menu_title="",  # Hide the default menu title
         options=["Generate Menu", "Menus", "Recipes", "Ingredients"],
-        icons=["play-circle-fill", "map-fill", "table", "tablet-fill"],  # Empty icons for all options
+        icons=["play-circle-fill", "map-fill", "table", "tablet-fill"],  # Icons for each option
         menu_icon="menu-button-wide",  # Icon for menu
         default_index=1,  # Default to "Menus"
         orientation="horizontal",
         styles={
-            "nav-link": {"font-size": "16px", "text-align": "center", "margin": "5px"},
-            "nav-link-selected": {"color": "white", "font-weight": "normal",},  # Highlight selected tab
+            "container": {
+                "display": "flex",
+                "justify-content": "center",
+                "flex-wrap": "wrap",  # Ensures proper wrapping on smaller screens
+                "padding": "10px",
+                "max-width": "100%",
+            },
+            "nav-item": {
+                "flex": "1 1 auto",  # Makes buttons equally spaced
+                "text-align": "center",
+                "min-width": "120px",  # Ensures consistent button width
+                "padding": "10px",
+            },
+            "nav-link": {
+                "font-size": "16px",
+                "text-align": "center",
+                "margin": "5px",
+            },
+            "nav-link-selected": {
+                "background-color": "#ff4b4b",  # Highlight color
+                "color": "white",
+                "font-weight": "normal",
+                "border-radius": "8px",
+            },
         }
-        
     )
 
     if nav_option == "Generate Menu":
