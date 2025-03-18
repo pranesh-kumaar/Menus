@@ -103,39 +103,39 @@ def main():
             st.session_state.all_meals_for_week = load_data(EXCEL_FILE_PATH, sheet_name='Weekly Menu').to_dict('records')
             st.success("Menu generated and saved successfully!")
                 
-        with st.expander("View Meal"):
-            # Display the weekly menu
-            days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-            today_index = datetime.now().weekday()
-            tomorrow_index = (today_index + 1) % 7
-            
-            # Options to view today's, tomorrow's, or the entire week's recipes
-            option = st.selectbox("Select an option", ["View Today's Recipe", "View Tomorrow's Recipe", "View Week's Recipe"])
-            
-            if option == "View Today's Recipe":
-                st.subheader(f"Recipes for {days_of_week[today_index]}")
-                today_meals = [meal for meal in st.session_state.all_meals_for_week if meal['Day'] == days_of_week[today_index]]
-                today_df = pd.DataFrame(today_meals).drop(columns=['Day'])
-                today_df = today_df[['Meal Type', 'Recipe Name', 'Ingredients', 'Recipe Link', 'Notes']]
-                today_df['Recipe Link'] = today_df['Recipe Link'].apply(lambda x: f'<a href="{x}" target="_blank">View Recipe</a>' if x != "N/A" else "N/A")
-                st.write(today_df.to_html(escape=False, index=False), unsafe_allow_html=True)
-            
-            elif option == "View Tomorrow's Recipe":
-                st.subheader(f"Recipes for {days_of_week[tomorrow_index]}")
-                tomorrow_meals = [meal for meal in st.session_state.all_meals_for_week if meal['Day'] == days_of_week[tomorrow_index]]
-                tomorrow_df = pd.DataFrame(tomorrow_meals).drop(columns=['Day'])
-                tomorrow_df = tomorrow_df[['Meal Type', 'Recipe Name', 'Ingredients', 'Recipe Link', 'Notes']]
-                tomorrow_df['Recipe Link'] = tomorrow_df['Recipe Link'].apply(lambda x: f'<a href="{x}" target="_blank">View Recipe</a>' if x != "N/A" else "N/A")
-                st.write(tomorrow_df.to_html(escape=False, index=False), unsafe_allow_html=True)
-            
-            elif option == "View Week's Recipe":
-                for day in days_of_week:
-                    st.subheader(f"Recipes for {day}")
-                    day_meals = [meal for meal in st.session_state.all_meals_for_week if meal['Day'] == day]
-                    day_df = pd.DataFrame(day_meals).drop(columns=['Day'])
-                    day_df = day_df[['Meal Type', 'Recipe Name', 'Ingredients', 'Recipe Link', 'Notes']]
-                    day_df['Recipe Link'] = day_df['Recipe Link'].apply(lambda x: f'<a href="{x}" target="_blank">View Recipe</a>' if x != "N/A" else "N/A")
-                    st.write(day_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+        
+        # Display the weekly menu
+        days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        today_index = datetime.now().weekday()
+        tomorrow_index = (today_index + 1) % 7
+        
+        # Options to view today's, tomorrow's, or the entire week's recipes
+        option = st.selectbox("Select an option", ["View Today's Recipe", "View Tomorrow's Recipe", "View Week's Recipe"])
+        
+        if option == "View Today's Recipe":
+            st.subheader(f"Recipes for {days_of_week[today_index]}")
+            today_meals = [meal for meal in st.session_state.all_meals_for_week if meal['Day'] == days_of_week[today_index]]
+            today_df = pd.DataFrame(today_meals).drop(columns=['Day'])
+            today_df = today_df[['Meal Type', 'Recipe Name', 'Ingredients', 'Recipe Link', 'Notes']]
+            today_df['Recipe Link'] = today_df['Recipe Link'].apply(lambda x: f'<a href="{x}" target="_blank">View Recipe</a>' if x != "N/A" else "N/A")
+            st.write(today_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+        
+        elif option == "View Tomorrow's Recipe":
+            st.subheader(f"Recipes for {days_of_week[tomorrow_index]}")
+            tomorrow_meals = [meal for meal in st.session_state.all_meals_for_week if meal['Day'] == days_of_week[tomorrow_index]]
+            tomorrow_df = pd.DataFrame(tomorrow_meals).drop(columns=['Day'])
+            tomorrow_df = tomorrow_df[['Meal Type', 'Recipe Name', 'Ingredients', 'Recipe Link', 'Notes']]
+            tomorrow_df['Recipe Link'] = tomorrow_df['Recipe Link'].apply(lambda x: f'<a href="{x}" target="_blank">View Recipe</a>' if x != "N/A" else "N/A")
+            st.write(tomorrow_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+        
+        elif option == "View Week's Recipe":
+            for day in days_of_week:
+                st.subheader(f"Recipes for {day}")
+                day_meals = [meal for meal in st.session_state.all_meals_for_week if meal['Day'] == day]
+                day_df = pd.DataFrame(day_meals).drop(columns=['Day'])
+                day_df = day_df[['Meal Type', 'Recipe Name', 'Ingredients', 'Recipe Link', 'Notes']]
+                day_df['Recipe Link'] = day_df['Recipe Link'].apply(lambda x: f'<a href="{x}" target="_blank">View Recipe</a>' if x != "N/A" else "N/A")
+                st.dataframe(day_df, hide_index=True, use_container_width=True)
 
 
         # Edit Meal Expander
