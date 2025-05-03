@@ -5,13 +5,18 @@ from datetime import datetime
 from streamlit_option_menu import option_menu
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import json
+import base64
 
 # Modified scope to only use Sheets API (no Drive access)
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/spreadsheets']
 
 # Authentication
-creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    json.loads(base64.b64decode(open('encoded_credentials.txt').read()).decode('utf-8')),
+    scope
+)
 client = gspread.authorize(creds)
 
 # Your Google Sheet ID
