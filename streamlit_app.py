@@ -140,7 +140,7 @@ def main():
     # Styled navigation bar
     nav_option = option_menu(
         menu_title="",  # Hide the default menu title
-        options=["Menu", "Menus", "Recipes", "Ingredients"],
+        options=["Generate", "Menus", "Recipes", "Ingredients"],
         icons=["play-circle-fill", "map-fill", "table", "tablet-fill"],  # Icons for each option
         menu_icon="menu-button-wide",  # Icon for menu
         default_index=1,  # Default to "Menus"
@@ -173,7 +173,7 @@ def main():
         }
     )
 
-    if nav_option == "Menu":
+    if nav_option == "Generate":
         if st.button("Re-Generate Menu"):
             
             # Initialize a list to keep track of previous meals
