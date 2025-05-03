@@ -3,33 +3,56 @@ import pandas as pd
 import random
 from datetime import datetime
 from streamlit_option_menu import option_menu
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+# Modified scope to only use Sheets API (no Drive access)
+scope = ['https://spreadsheets.google.com/feeds',
+         'https://www.googleapis.com/auth/spreadsheets']
+
+# Authentication
+creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+client = gspread.authorize(creds)
+
+# Your Google Sheet ID
+SHEET_ID = '1Fq1np4kbfEB0P3qPmBl3bhrupD3St6lR552vLxtld1s' 
+
+def load_data(sheet_name):
+    """Load data from specific worksheet"""
+    sheet = client.open_by_key(SHEET_ID).worksheet(sheet_name)
+    return pd.DataFrame(sheet.get_all_records())
 
 # Predefined Excel file path
-EXCEL_FILE_PATH = r"Meals.xlsx"
+# EXCEL_FILE_PATH = r"Meals.xlsx"
 st.set_page_config(page_title="Meal Planner", layout="wide")
 
-# Function to load data from Excel
-def load_data(file_path, sheet_name=0):
-    df = pd.read_excel(file_path, sheet_name=sheet_name)
-    return df
+# def load_data(file_path, sheet_name=0):
+#     df = pd.read_excel(file_path, sheet_name=sheet_name)
+#     return df
 
-def save_data(data, file_path, sheet_name):
-    # Try to load existing sheets first
-    try:
-        existing_sheets = pd.read_excel(file_path, sheet_name=None)  # Load all sheets
-    except FileNotFoundError:
-        existing_sheets = {}  # If the file doesn't exist, start fresh
+# def save_data(data, file_path, sheet_name):
+#     # Try to load existing sheets first
+#     try:
+#         existing_sheets = pd.read_excel(file_path, sheet_name=None)  # Load all sheets
+#     except FileNotFoundError:
+#         existing_sheets = {}  # If the file doesn't exist, start fresh
 
-    # Convert new data into a DataFrame
-    df = pd.DataFrame(data)
+#     # Convert new data into a DataFrame
+#     df = pd.DataFrame(data)
 
-    # Update the existing sheets with the new data
-    existing_sheets[sheet_name] = df  # Replace or add the specific sheet
+#     # Update the existing sheets with the new data
+#     existing_sheets[sheet_name] = df  # Replace or add the specific sheet
 
-    # Save all sheets back to the Excel file
-    with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
-        for sheet, df in existing_sheets.items():
-            df.to_excel(writer, index=False, sheet_name=sheet)
+#     # Save all sheets back to the Excel file
+#     with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+#         for sheet, df in existing_sheets.items():
+#             df.to_excel(writer, index=False, sheet_name=sheet)
+
+def save_data(df, sheet_name):
+    """Save data to specific worksheet"""
+    sheet = client.open_by_key(SHEET_ID).worksheet(sheet_name)
+    sheet.clear()
+    sheet.update([df.columns.values.tolist()] + df.values.tolist())
 
 # Convert weekly menu into a calendar-style DataFrame
 def create_calendar_view(meal_data, available_recipes):
@@ -91,13 +114,13 @@ def main():
     
     # Initialize session state for data
     if 'data' not in st.session_state:
-        st.session_state.data = load_data(EXCEL_FILE_PATH)
+        st.session_state.data = load_data('Recipes')
     
     # Initialize session state for menu
     if 'all_meals_for_week' not in st.session_state:
         try:
             # Load the saved menu from the Excel sheet
-            st.session_state.all_meals_for_week = load_data(EXCEL_FILE_PATH, sheet_name='Weekly Menu').to_dict('records')
+            st.session_state.all_meals_for_week = load_data(sheet_name='Weekly Menu').to_dict('records')
         except Exception as e:
             # Generate a random menu if the saved menu is not available
             previous_meals = []
@@ -166,12 +189,12 @@ def main():
 
             # Save the generated menu to the Excel file
             weekly_menu_df = pd.DataFrame(st.session_state.all_meals_for_week)
-            save_data(weekly_menu_df, EXCEL_FILE_PATH, sheet_name='Weekly Menu')
-            st.session_state.all_meals_for_week = load_data(EXCEL_FILE_PATH, sheet_name='Weekly Menu').to_dict('records')
+            save_data(weekly_menu_df, sheet_name='Weekly Menu')
+            st.session_state.all_meals_for_week = load_data(sheet_name='Weekly Menu').to_dict('records')
 
                 # Display the weekly menu
         days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        st.session_state.all_meals_for_week = load_data(EXCEL_FILE_PATH, sheet_name='Weekly Menu').to_dict('records')
+        st.session_state.all_meals_for_week = load_data(sheet_name='Weekly Menu').to_dict('records')
         # for day in days_of_week:
         #     st.subheader(f"Recipes for {day}")
         #     day_meals = [meal for meal in st.session_state.all_meals_for_week if meal['Day'] == day]
@@ -218,10 +241,10 @@ def main():
 
             # Save updated meals to Excel
             updated_menu_df = pd.DataFrame(st.session_state.all_meals_for_week)
-            save_data(updated_menu_df, EXCEL_FILE_PATH, sheet_name="Weekly Menu")
+            save_data(updated_menu_df, sheet_name="Weekly Menu")
 
             # Refresh session state
-            st.session_state.all_meals_for_week = load_data(EXCEL_FILE_PATH, sheet_name="Weekly Menu").to_dict("records")
+            st.session_state.all_meals_for_week = load_data(sheet_name="Weekly Menu").to_dict("records")
             st.rerun()
     
     elif nav_option == "Menus":
@@ -287,7 +310,7 @@ def main():
     elif nav_option == "Recipes":
         st.subheader("All Recipes")
         # Reset index to bring "Recipe Name" back as a column
-        st.session_state.data = load_data(EXCEL_FILE_PATH, sheet_name='Recipes')
+        st.session_state.data = load_data(sheet_name='Recipes')
 
         # Load and sort the recipes
         df_sorted = st.session_state.data.sort_values(by="Recipe Name")
@@ -327,9 +350,9 @@ def main():
                     }
                     new_recipe_df = pd.DataFrame([new_recipe])
                     st.session_state.data = pd.concat([st.session_state.data, new_recipe_df], ignore_index=True)
-                    save_data(st.session_state.data, EXCEL_FILE_PATH, sheet_name='Recipes')
+                    save_data(st.session_state.data, sheet_name='Recipes')
                     # Refresh data
-                    st.session_state.data = load_data(EXCEL_FILE_PATH, sheet_name='Recipes')
+                    st.session_state.data = load_data(sheet_name='Recipes')
                     st.rerun()
 
         # Edit a Recipe Button
@@ -352,9 +375,9 @@ def main():
                     st.session_state.data.loc[st.session_state.data['Recipe Name'] == selected_recipe_name, 'Recipe Link'] = edit_recipe_link
                     st.session_state.data.loc[st.session_state.data['Recipe Name'] == selected_recipe_name, 'Ingredients'] = edit_ingredients
                     st.session_state.data.loc[st.session_state.data['Recipe Name'] == selected_recipe_name, 'Notes'] = edit_notes
-                    save_data(st.session_state.data, EXCEL_FILE_PATH, sheet_name='Recipes')
+                    save_data(st.session_state.data, sheet_name='Recipes')
                     # Refresh data
-                    st.session_state.data = load_data(EXCEL_FILE_PATH, sheet_name='Recipes')
+                    st.session_state.data = load_data(sheet_name='Recipes')
                     st.rerun()
 
         # Delete a Recipe Button
@@ -363,9 +386,9 @@ def main():
             selected_recipe_name_to_delete = st.selectbox("Select a Recipe to Delete", sorted_recipe_names, key="delete_recipe_select")
             if st.button("Delete Recipe", key="delete_recipe_button"):
                 st.session_state.data = st.session_state.data[st.session_state.data['Recipe Name'] != selected_recipe_name_to_delete]
-                save_data(st.session_state.data, EXCEL_FILE_PATH, sheet_name='Recipes')
+                save_data(st.session_state.data, sheet_name='Recipes')
                 # Refresh data
-                st.session_state.data = load_data(EXCEL_FILE_PATH, sheet_name='Recipes')
+                st.session_state.data = load_data(sheet_name='Recipes')
                 st.rerun()
 
     elif nav_option == "Ingredients":

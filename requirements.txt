@@ -1,3 +1,5 @@
 streamlit
 openpyxl
 streamlit_option_menu
+gspread 
+oauth2client
