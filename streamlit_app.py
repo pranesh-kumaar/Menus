@@ -173,7 +173,7 @@ def main():
         }
     )
 
-    if nav_option == "Generate Menu":
+    if nav_option == "Menu":
         if st.button("Re-Generate Menu"):
             
             # Initialize a list to keep track of previous meals
